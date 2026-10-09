@@ -1,0 +1,84 @@
+{
+  "name": "FRI-01 Ingestão WhatsApp → Route Intelligence",
+  "active": false,
+  "settings": { "executionOrder": "v1", "timezone": "America/Sao_Paulo" },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-inbound",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1",
+      "name": "Webhook provedor WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Converte o payload do provedor para o contrato canônico InboundMessage.\n// TODO(provedor): ajustar os caminhos abaixo ao formato do provedor aprovado (ponto A1).\nconst body = $input.first().json.body ?? $input.first().json;\nconst m = body.message ?? body;\n\nconst out = {\n  providerMessageId: String(m.id ?? m.key?.id ?? ''),\n  groupId: String(m.chatId ?? m.key?.remoteJid ?? m.from ?? ''),\n  senderId: String(m.author ?? m.key?.participant ?? m.sender ?? ''),\n  receivedAt: new Date((m.timestamp ?? m.messageTimestamp ?? Date.now() / 1000) * 1000).toISOString(),\n  text: m.text ?? m.body ?? m.caption ?? m.message?.conversation ?? null,\n  media: null,\n  location: null,\n};\n\nif (m.mimetype || m.media?.mimetype || m.message?.imageMessage) {\n  out.media = {\n    mimeType: m.mimetype ?? m.media?.mimetype ?? 'image/jpeg',\n    url: m.mediaUrl ?? m.media?.url ?? null,\n    base64: m.media?.base64 ?? null,\n    capturedAt: null,\n  };\n  if (!out.text && m.media?.caption) out.text = m.media.caption;\n}\n\nconst loc = m.location ?? m.message?.locationMessage ?? m.message?.liveLocationMessage;\nif (loc) {\n  out.location = {\n    latitude: Number(loc.latitude ?? loc.degreesLatitude),\n    longitude: Number(loc.longitude ?? loc.degreesLongitude),\n    isLive: Boolean(m.message?.liveLocationMessage) || loc.isLive === true,\n  };\n}\n\nif (!out.providerMessageId || !out.groupId) {\n  return [{ json: { skip: true, reason: 'payload sem id de mensagem ou grupo' } }];\n}\nreturn [{ json: out }];"
+      },
+      "id": "a2",
+      "name": "Normalizar mensagem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            { "id": "c1", "leftValue": "={{ $json.skip }}", "rightValue": true, "operator": { "type": "boolean", "operation": "notEquals" } }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a3",
+      "name": "Payload válido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.FRIPOINT_SERVICE_URL }}/v1/messages/ingest",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": { "timeout": 120000, "retry": { "maxTries": 3, "waitBetweenTries": 2000 } }
+      },
+      "id": "a4",
+      "name": "POST /v1/messages/ingest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, -100],
+      "credentials": { "httpHeaderAuth": { "id": "", "name": "Fripoint Service Token" } }
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ { ok: true } }}", "options": {} },
+      "id": "a5",
+      "name": "Responder 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [960, 0]
+    }
+  ],
+  "connections": {
+    "Webhook provedor WhatsApp": { "main": [[{ "node": "Normalizar mensagem", "type": "main", "index": 0 }]] },
+    "Normalizar mensagem": { "main": [[{ "node": "Payload válido?", "type": "main", "index": 0 }]] },
+    "Payload válido?": {
+      "main": [
+        [{ "node": "POST /v1/messages/ingest", "type": "main", "index": 0 }],
+        [{ "node": "Responder 200", "type": "main", "index": 0 }]
+      ]
+    },
+    "POST /v1/messages/ingest": { "main": [[{ "node": "Responder 200", "type": "main", "index": 0 }]] }
+  }
+}

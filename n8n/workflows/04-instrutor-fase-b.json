@@ -1,0 +1,73 @@
+{
+  "name": "FRI-04 Instrutor Fase B (DESATIVADO até autorização formal)",
+  "active": false,
+  "settings": { "executionOrder": "v1", "timezone": "America/Sao_Paulo" },
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "instructor-suggestion", "options": {} },
+      "id": "d1",
+      "name": "Webhook instructor-suggestion (do serviço)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            { "id": "g1", "leftValue": "={{ $env.FRIPOINT_PHASE_B_AUTHORIZED }}", "rightValue": "true", "operator": { "type": "string", "operation": "equals" } }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d2",
+      "name": "Fase B autorizada? (trava n8n)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "// TODO(provedor): montar a requisição de envio de texto ao grupo conforme o provedor aprovado (ponto A1).\nconst body = $input.first().json.body;\nreturn [{ json: { to: body.groupId, text: body.message, routeId: body.routeId, trigger: body.trigger } }];"
+      },
+      "id": "d3",
+      "name": "Montar envio ao grupo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, -100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.WHATSAPP_PROVIDER_SEND_URL }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "d4",
+      "name": "Enviar ao grupo (provedor WhatsApp)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, -100],
+      "credentials": { "httpHeaderAuth": { "id": "", "name": "WhatsApp Provider" } }
+    },
+    {
+      "parameters": { "content": "## Trava dupla\n\n1. O serviço só gera sugestões com `OPERATION_PHASE=B`.\n2. Este workflow só envia com `FRIPOINT_PHASE_B_AUTHORIZED=true` no n8n.\n\nAmbas dependem da aprovação formal registrada em docs/03-pontos-de-aprovacao.md (ponto A5).", "height": 220, "width": 360 },
+      "id": "d5",
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, 160]
+    }
+  ],
+  "connections": {
+    "Webhook instructor-suggestion (do serviço)": { "main": [[{ "node": "Fase B autorizada? (trava n8n)", "type": "main", "index": 0 }]] },
+    "Fase B autorizada? (trava n8n)": { "main": [[{ "node": "Montar envio ao grupo", "type": "main", "index": 0 }], []] },
+    "Montar envio ao grupo": { "main": [[{ "node": "Enviar ao grupo (provedor WhatsApp)", "type": "main", "index": 0 }]] }
+  }
+}

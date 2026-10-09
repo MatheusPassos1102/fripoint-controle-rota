@@ -1,0 +1,30 @@
+{
+  "name": "fripoint-route-intelligence",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Auditoria assistida por IA das rotas de entrega da Fripoint (POP-LOG-001 v1.1) — Claude API + n8n + Supabase",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev": "tsx watch src/service/server.ts",
+    "start": "node dist/service/server.js",
+    "simulate": "tsx scripts/simulate-route.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.132.1",
+    "@supabase/supabase-js": "^2.117.3",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "name": "FRI-02 Alertas à supervisão (Fase A)",
+  "active": false,
+  "settings": { "executionOrder": "v1", "timezone": "America/Sao_Paulo" },
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "minutes", "minutesInterval": 5 }] } },
+      "id": "b1",
+      "name": "A cada 5 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.FRIPOINT_SERVICE_URL }}/v1/alerts/pending",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "b2",
+      "name": "GET /v1/alerts/pending",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0],
+      "credentials": { "httpHeaderAuth": { "id": "", "name": "Fripoint Service Token" } }
+    },
+    {
+      "parameters": { "fieldToSplitOut": "alerts", "options": {} },
+      "id": "b3",
+      "name": "Um item por alerta",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.FRIPOINT_FROM_EMAIL }}",
+        "toEmail": "={{ $env.SUPERVISAO_EMAIL }}",
+        "subject": "=[Rota][{{ $json.severity }}] {{ $json.title }}",
+        "emailFormat": "text",
+        "text": "=Alerta: {{ $json.kind }}\nRota: {{ $json.routeId }}\nCriado em: {{ $json.createdAt }}\n\n{{ JSON.stringify($json.details, null, 2) }}\n\nEste alerta foi gerado pela auditoria assistida por IA (Fase A). A avaliação final cabe à supervisão; nenhuma sanção é automática.",
+        "options": {}
+      },
+      "id": "b4",
+      "name": "E-mail à supervisão",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [720, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.FRIPOINT_SERVICE_URL }}/v1/alerts/{{ $('Um item por alerta').item.json.id }}/ack",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ by: 'n8n:notificado-supervisao' }) }}",
+        "options": {}
+      },
+      "id": "b5",
+      "name": "POST /v1/alerts/:id/ack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 0],
+      "credentials": { "httpHeaderAuth": { "id": "", "name": "Fripoint Service Token" } }
+    }
+  ],
+  "connections": {
+    "A cada 5 minutos": { "main": [[{ "node": "GET /v1/alerts/pending", "type": "main", "index": 0 }]] },
+    "GET /v1/alerts/pending": { "main": [[{ "node": "Um item por alerta", "type": "main", "index": 0 }]] },
+    "Um item por alerta": { "main": [[{ "node": "E-mail à supervisão", "type": "main", "index": 0 }]] },
+    "E-mail à supervisão": { "main": [[{ "node": "POST /v1/alerts/:id/ack", "type": "main", "index": 0 }]] }
+  }
+}

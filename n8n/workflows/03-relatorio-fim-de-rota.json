@@ -1,0 +1,58 @@
+{
+  "name": "FRI-03 Relatório de encerramento de rota",
+  "active": false,
+  "settings": { "executionOrder": "v1", "timezone": "America/Sao_Paulo" },
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "route-closed", "options": {} },
+      "id": "c1",
+      "name": "Webhook route-closed (do serviço)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": { "amount": 10, "unit": "minutes" },
+      "id": "c2",
+      "name": "Aguardar fotos do retorno",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.FRIPOINT_SERVICE_URL }}/v1/routes/{{ $('Webhook route-closed (do serviço)').item.json.body.routeId }}/report",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": { "timeout": 300000 }
+      },
+      "id": "c3",
+      "name": "POST /v1/routes/:id/report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 0],
+      "credentials": { "httpHeaderAuth": { "id": "", "name": "Fripoint Service Token" } }
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.FRIPOINT_FROM_EMAIL }}",
+        "toEmail": "={{ $env.SUPERVISAO_EMAIL }}",
+        "subject": "=[Rota] Relatório de encerramento — {{ $json.status.routeDate ?? 'data não informada' }} — {{ $json.narrative.headline }}",
+        "emailFormat": "text",
+        "text": "={{ $json.markdown }}",
+        "options": {}
+      },
+      "id": "c4",
+      "name": "Enviar relatório à supervisão",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [720, 0]
+    }
+  ],
+  "connections": {
+    "Webhook route-closed (do serviço)": { "main": [[{ "node": "Aguardar fotos do retorno", "type": "main", "index": 0 }]] },
+    "Aguardar fotos do retorno": { "main": [[{ "node": "POST /v1/routes/:id/report", "type": "main", "index": 0 }]] },
+    "POST /v1/routes/:id/report": { "main": [[{ "node": "Enviar relatório à supervisão", "type": "main", "index": 0 }]] }
+  }
+}
