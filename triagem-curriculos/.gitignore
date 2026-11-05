@@ -1,0 +1,6 @@
+curriculos/
+resultados/
+.cache/
+*.xlsx
+*.csv
+.env

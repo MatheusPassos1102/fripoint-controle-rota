@@ -1,0 +1,34 @@
+# Exemplo de vaga. Copie este arquivo e ajuste para cada vaga aberta no Indeed.
+titulo: Motorista Entregador
+local: São Paulo - SP
+
+descricao: >
+  Responsável por realizar entregas em rota definida, conferir mercadorias,
+  coletar assinaturas e manter o veículo em ordem. Trabalho de segunda a sábado.
+
+# Requisitos obrigatórios: quem não atende recebe recomendação "descartar".
+obrigatorios:
+  - CNH categoria B ou superior, válida
+  - Experiência comprovada de pelo menos 1 ano com entregas, rotas ou transporte
+  - Ensino fundamental completo
+
+# Diferenciais: aumentam a nota, mas não eliminam.
+desejaveis:
+  - CNH categoria C, D ou E
+  - Experiência com aplicativos de roteirização ou rastreamento
+  - Curso de direção defensiva ou MOPP
+  - Conhece a região metropolitana de São Paulo
+
+# Instruções extras para o avaliador (opcional).
+observacoes: >
+  Valorize estabilidade em empregos anteriores e experiência com entregas
+  urbanas. Experiência só como motorista de aplicativo de passageiros conta
+  parcialmente.
+
+# Nota mínima para recomendar "avancar" (0 a 100).
+nota_corte: 70
+
+# Palavras-chave para o modo sem IA (--sem-ia). Use minúsculas.
+palavras_chave:
+  obrigatorias: ["cnh"]
+  desejaveis: ["entrega", "entregador", "rota", "motorista", "logística", "logistica", "mopp", "direção defensiva", "categoria c", "categoria d", "categoria e"]
