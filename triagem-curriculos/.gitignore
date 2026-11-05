@@ -4,3 +4,4 @@ resultados/
 *.xlsx
 *.csv
 .env
+__pycache__/
